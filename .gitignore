@@ -71,3 +71,5 @@ sonar-security-report.js
 todo.md
 .env
 jwt.key
+trivy-report.json
+trivy-report.txt
