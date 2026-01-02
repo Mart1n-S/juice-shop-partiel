@@ -152,17 +152,21 @@ export function placeOrder () {
           }
 
           db.ordersCollection.insert({
-            promotionalAmount: discountAmount,
-            paymentId: req.body.orderDetails ? req.body.orderDetails.paymentId : null,
-            addressId: req.body.orderDetails ? req.body.orderDetails.addressId : null,
-            orderId,
+            promotionalAmount: String(discountAmount),
+            paymentId: req.body.orderDetails?.paymentId
+              ? String(req.body.orderDetails.paymentId)
+              : null,
+            addressId: req.body.orderDetails?.addressId
+              ? String(req.body.orderDetails.addressId)
+              : null,
+            orderId: String(orderId),
             delivered: false,
-            email: (email ? email.replace(/[aeiou]/gi, '*') : undefined),
+            email: email ? email.replace(/[aeiou]/gi, '*') : undefined,
             totalPrice,
             products: basketProducts,
             bonus: totalPoints,
             deliveryPrice: deliveryAmount,
-            eta: deliveryMethod.eta.toString()
+            eta: String(deliveryMethod.eta)
           }).then(() => {
             doc.end()
           })
