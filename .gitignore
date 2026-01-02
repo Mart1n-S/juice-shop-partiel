@@ -69,3 +69,5 @@ config/*.yml
 sonar-security-report.js
 .scannerwork
 todo.md
+.env
+jwt.key
