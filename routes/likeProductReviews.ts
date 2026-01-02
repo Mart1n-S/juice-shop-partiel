@@ -15,7 +15,9 @@ const sleep = async (ms: number) => await new Promise(resolve => setTimeout(reso
 
 export function likeProductReviews () {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const id = req.body.id
+    // 🔐 Sanitize user-controlled input to prevent NoSQL Injection
+    const id = String(req.body.id)
+
     const user = security.authenticatedUsers.from(req)
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized' })
@@ -39,6 +41,7 @@ export function likeProductReviews () {
 
       // Artificial wait for timing attack challenge
       await sleep(150)
+
       try {
         const updatedReview: Review = await db.reviewsCollection.findOne({ _id: id })
         const updatedLikedBy = updatedReview.likedBy
@@ -51,6 +54,7 @@ export function likeProductReviews () {
           { _id: id },
           { $set: { likedBy: updatedLikedBy } }
         )
+
         res.json(result)
       } catch (err) {
         res.status(500).json(err)
