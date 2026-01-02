@@ -16,14 +16,14 @@ export function createProductReviews () {
     const user = security.authenticatedUsers.from(req)
     challengeUtils.solveIf(
       challenges.forgedReviewChallenge,
-      () => user?.data?.email !== req.body.author
+      () => user?.data?.email !== String(req.body.author)
     )
 
     try {
       await reviewsCollection.insert({
-        product: req.params.id,
-        message: req.body.message,
-        author: req.body.author,
+        product: String(req.params.id),
+        message: String(req.body.message),
+        author: String(req.body.author),
         likesCount: 0,
         likedBy: []
       })
