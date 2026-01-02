@@ -10,7 +10,10 @@ import * as security from '../lib/insecurity'
 
 export function orderHistory () {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const loggedInUser = security.authenticatedUsers.get(req.headers?.authorization?.replace('Bearer ', ''))
+    const loggedInUser = security.authenticatedUsers.get(
+      req.headers?.authorization?.replace('Bearer ', '')
+    )
+
     if (loggedInUser?.data?.email && loggedInUser.data.id) {
       const email = loggedInUser.data.email
       const updatedEmail = email.replace(/[aeiou]/gi, '*')
@@ -31,9 +34,16 @@ export function allOrders () {
 
 export function toggleDeliveryStatus () {
   return async (req: Request, res: Response, next: NextFunction) => {
+    const id = String(req.params.id)
+
     const deliveryStatus = !req.body.deliveryStatus
     const eta = deliveryStatus ? '0' : '1'
-    await ordersCollection.update({ _id: req.params.id }, { $set: { delivered: deliveryStatus, eta } })
+
+    await ordersCollection.update(
+      { _id: id },
+      { $set: { delivered: deliveryStatus, eta } }
+    )
+
     res.status(200).json({ status: 'success' })
   }
 }
