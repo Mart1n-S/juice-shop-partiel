@@ -5,29 +5,33 @@
 
 import { type Request, type Response, type NextFunction } from 'express'
 
-import * as challengeUtils from '../lib/challengeUtils'
-import { challenges } from '../data/datacache'
-import * as security from '../lib/insecurity'
-import * as utils from '../lib/utils'
+/**
+ * Strict allowlist of internal redirection targets.
+ * Only relative paths are allowed to prevent open redirect attacks.
+ */
+const ALLOWED_REDIRECT_PATHS: string[] = [
+  '/profile',
+  '/dashboard',
+  '/orders'
+  // D'autres chemins autorisés peuvent être ajoutés ici
+]
 
 export function performRedirect () {
-  return ({ query }: Request, res: Response, next: NextFunction) => {
-    const toUrl: string = query.to as string
-    if (security.isRedirectAllowed(toUrl)) {
-      challengeUtils.solveIf(challenges.redirectCryptoCurrencyChallenge, () => { return toUrl === 'https://explorer.dash.org/address/Xr556RzuwX6hg5EGpkybbv5RanJoZN17kW' || toUrl === 'https://blockchain.info/address/1AbKfgvw9psQ41NbLi8kufDQTezwG8DRZm' || toUrl === 'https://etherscan.io/address/0x0f933ab9fcaaa782d0279c300d73750e1311eae6' })
-      challengeUtils.solveIf(challenges.redirectChallenge, () => { return isUnintendedRedirect(toUrl) })
-      res.redirect(toUrl)
-    } else {
-      res.status(406)
-      next(new Error('Unrecognized target URL for redirect: ' + toUrl))
-    }
-  }
-}
+  return (req: Request, res: Response, next: NextFunction) => {
+    const toPath = req.query.to as string | undefined
 
-function isUnintendedRedirect (toUrl: string) {
-  let unintended = true
-  for (const allowedUrl of security.redirectAllowlist) {
-    unintended = unintended && !utils.startsWith(toUrl, allowedUrl)
+    if (!toPath) {
+      return res.status(400).json({
+        error: 'Missing redirection target'
+      })
+    }
+
+    if (!ALLOWED_REDIRECT_PATHS.includes(toPath)) {
+      return res.status(400).json({
+        error: 'Invalid redirection target'
+      })
+    }
+
+    res.redirect(toPath)
   }
-  return unintended
 }
