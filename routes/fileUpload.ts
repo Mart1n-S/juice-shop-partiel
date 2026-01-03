@@ -25,31 +25,50 @@ function ensureFileIsPassed ({ file }: Request, res: Response, next: NextFunctio
 
 function handleZipFileUpload ({ file }: Request, res: Response, next: NextFunction) {
   if (utils.endsWith(file?.originalname.toLowerCase(), '.zip')) {
-    if (((file?.buffer) != null) && utils.isChallengeEnabled(challenges.fileWriteChallenge)) {
+    if ((file?.buffer != null) && utils.isChallengeEnabled(challenges.fileWriteChallenge)) {
       const buffer = file.buffer
       const filename = file.originalname.toLowerCase()
       const tempFile = path.join(os.tmpdir(), filename)
-      fs.open(tempFile, 'w', function (err, fd) {
-        if (err != null) { next(err) }
-        fs.write(fd, buffer, 0, buffer.length, null, function (err) {
-          if (err != null) { next(err) }
-          fs.close(fd, function () {
+
+      fs.open(tempFile, 'w', (err, fd) => {
+        if (err) { next(err); return }
+
+        fs.write(fd, buffer, 0, buffer.length, null, err => {
+          if (err) { next(err); return }
+
+          fs.close(fd, () => {
+            const targetDir = path.resolve('uploads/complaints') + path.sep
+
             fs.createReadStream(tempFile)
               .pipe(unzipper.Parse())
-              .on('entry', function (entry: any) {
-                const fileName = entry.path
-                const absolutePath = path.resolve('uploads/complaints/' + fileName)
-                challengeUtils.solveIf(challenges.fileWriteChallenge, () => { return absolutePath === path.resolve('ftp/legal.md') })
-                if (absolutePath.includes(path.resolve('.'))) {
-                  entry.pipe(fs.createWriteStream('uploads/complaints/' + fileName).on('error', function (err) { next(err) }))
-                } else {
+              .on('entry', (entry: any) => {
+                const entryPath = entry.path
+
+                // Zip Slip protection
+                const normalizedPath = path.resolve(targetDir, entryPath)
+
+                challengeUtils.solveIf(
+                  challenges.fileWriteChallenge,
+                  () => normalizedPath === path.resolve('ftp/legal.md')
+                )
+
+                if (!normalizedPath.startsWith(targetDir)) {
                   entry.autodrain()
+                  return
                 }
-              }).on('error', function (err: unknown) { next(err) })
+
+                entry
+                  .pipe(
+                    fs.createWriteStream(normalizedPath)
+                      .on('error', err => { next(err) })
+                  )
+              })
+              .on('error', err => { next(err) })
           })
         })
       })
     }
+
     res.status(204).end()
   } else {
     next()
@@ -58,24 +77,28 @@ function handleZipFileUpload ({ file }: Request, res: Response, next: NextFuncti
 
 function checkUploadSize ({ file }: Request, res: Response, next: NextFunction) {
   if (file != null) {
-    challengeUtils.solveIf(challenges.uploadSizeChallenge, () => { return file?.size > 100000 })
+    challengeUtils.solveIf(challenges.uploadSizeChallenge, () => file.size > 100000)
   }
   next()
 }
 
 function checkFileType ({ file }: Request, res: Response, next: NextFunction) {
-  const fileType = file?.originalname.substr(file.originalname.lastIndexOf('.') + 1).toLowerCase()
+  const fileType = file?.originalname
+    .substr(file.originalname.lastIndexOf('.') + 1)
+    .toLowerCase()
+
   challengeUtils.solveIf(challenges.uploadTypeChallenge, () => {
     return !(fileType === 'pdf' || fileType === 'xml' || fileType === 'zip' || fileType === 'yml' || fileType === 'yaml')
   })
+
   next()
 }
 
 function handleXmlUpload ({ file }: Request, res: Response, next: NextFunction) {
   if (utils.endsWith(file?.originalname.toLowerCase(), '.xml')) {
-    challengeUtils.solveIf(challenges.deprecatedInterfaceChallenge, () => { return true })
+    challengeUtils.solveIf(challenges.deprecatedInterfaceChallenge, () => true)
 
-    if (((file?.buffer) != null) && utils.isChallengeEnabled(challenges.deprecatedInterfaceChallenge)) {
+    if ((file?.buffer != null) && utils.isChallengeEnabled(challenges.deprecatedInterfaceChallenge)) {
       const data = file.buffer.toString()
 
       try {
@@ -129,9 +152,9 @@ function handleXmlUpload ({ file }: Request, res: Response, next: NextFunction) 
 
 function handleYamlUpload ({ file }: Request, res: Response, next: NextFunction) {
   if (utils.endsWith(file?.originalname.toLowerCase(), '.yml') || utils.endsWith(file?.originalname.toLowerCase(), '.yaml')) {
-    challengeUtils.solveIf(challenges.deprecatedInterfaceChallenge, () => { return true })
+    challengeUtils.solveIf(challenges.deprecatedInterfaceChallenge, () => true)
 
-    if (((file?.buffer) != null) && utils.isChallengeEnabled(challenges.deprecatedInterfaceChallenge)) {
+    if ((file?.buffer != null) && utils.isChallengeEnabled(challenges.deprecatedInterfaceChallenge)) {
       const data = file.buffer.toString()
 
       try {
