@@ -182,8 +182,50 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   app.use(cors())
 
   /* Security middleware */
-  app.use(helmet.noSniff())
-  app.use(helmet.frameguard())
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          'cdnjs.cloudflare.com'
+        ],
+
+        styleSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          'cdnjs.cloudflare.com'
+        ],
+
+        imgSrc: [
+          "'self'",
+          'data:'
+        ],
+
+        fontSrc: ["'self'", 'cdnjs.cloudflare.com'],
+
+        connectSrc: ["'self'"],
+
+        frameAncestors: ["'none'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"]
+      }
+    },
+    frameguard: { action: 'deny' },
+    noSniff: true,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+  }))
+
+  app.use((_req, res, next) => {
+    res.setHeader(
+      'Permissions-Policy',
+      'geolocation=(), microphone=(), camera=(), payment=()'
+    )
+    next()
+  })
+
   // app.use(helmet.xssFilter()); // = no protection from persisted XSS via RESTful API
   app.disable('x-powered-by')
   app.use(featurePolicy({
