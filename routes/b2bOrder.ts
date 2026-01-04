@@ -31,11 +31,12 @@ export function b2bOrder () {
           paymentDue: dateTwoWeeksFromNow()
         })
       } catch (err) {
-        // Explicitly handle the parsing error
         challengeUtils.solveIf(
           challenges.rceChallenge,
           () => true
         )
+
+        console.debug(`Invalid orderLinesData payload: ${String(err)}`)
 
         return res.status(400).json({
           error: 'Invalid orderLinesData content'
