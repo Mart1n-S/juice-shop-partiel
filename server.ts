@@ -328,7 +328,15 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
 
   app.use(express.static(path.resolve('frontend/dist/frontend')))
-  app.use(cookieParser('kekse'))
+
+  const cookieSecret = process.env.COOKIE_SECRET
+
+  if (!cookieSecret) {
+    throw new Error('COOKIE_SECRET environment variable is not set')
+  }
+
+  app.use(cookieParser(cookieSecret))
+
   // vuln-code-snippet end directoryListingChallenge accessLogDisclosureChallenge
 
   /* Configure and enable backend-side i18n */
