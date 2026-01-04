@@ -60,7 +60,7 @@ function getCodingChallengeFromFileContent (source: string, challengeKey: string
   if (snippets == null) {
     throw new BrokenBoundary('Broken code snippet boundaries for: ' + challengeKey)
   }
-  let snippet = snippets[0] // TODO Currently only a single code snippet is supported
+  let snippet = snippets[0]
   snippet = snippet.replace(/\s?[/#]{0,2} vuln-code-snippet start.*[\r\n]{0,2}/g, '')
   snippet = snippet.replace(/\s?[/#]{0,2} vuln-code-snippet end.*/g, '')
   snippet = snippet.replace(/.*[/#]{0,2} vuln-code-snippet hide-line[\r\n]{0,2}/g, '')

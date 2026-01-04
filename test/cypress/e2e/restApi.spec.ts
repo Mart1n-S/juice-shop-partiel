@@ -102,7 +102,7 @@ describe('/rest/saveLoginIp', () => {
               console.log('Success')
             }
           })
-          cy.expectChallengeSolved({ challenge: 'HTTP-Header XSS' }) // TODO Add missing check for alert presence
+          cy.expectChallengeSolved({ challenge: 'HTTP-Header XSS' })
         }
       })
     })

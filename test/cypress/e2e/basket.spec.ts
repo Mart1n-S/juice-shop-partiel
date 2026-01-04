@@ -47,8 +47,6 @@ describe('/#/basket', () => {
         })
 
         cy.visit('/#/basket')
-
-        // TODO Verify functionally that it's not the basket of the admin
         cy.expectChallengeSolved({ challenge: 'View Basket' })
       })
     })

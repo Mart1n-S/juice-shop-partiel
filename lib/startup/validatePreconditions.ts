@@ -91,7 +91,7 @@ export const checkIfDomainReachable = async (domain: string) => {
       domainDependencies[domain].forEach((dependency: string) => {
         logger.warn(`${colors.italic(dependency)} will not work as intended without access to ${colors.bold(domain)}`)
       })
-      return true // TODO Consider switching to "false" with breaking release v16.0.0 or later
+      return true
     })
 }
 
