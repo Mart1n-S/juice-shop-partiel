@@ -76,12 +76,15 @@ router.post(
 
       res.clearCookie('token')
 
-      // Toujours utiliser une vue fixe (pas de layout contrôlé par l'utilisateur)
+      // Whitelisting explicite des données envoyées au template
+      const templateData = {
+        email: req.body.email,
+        securityAnswer: req.body.securityAnswer
+      }
+
       res.render(
         'dataErasureResult',
-        {
-          ...req.body
-        },
+        templateData,
         (error, html) => {
           if (!html || error) {
             next(new Error(error?.message))
