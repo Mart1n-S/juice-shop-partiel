@@ -7,44 +7,85 @@ import fs from 'node:fs'
 import { Readable } from 'node:stream'
 import { finished } from 'node:stream/promises'
 import { type Request, type Response, type NextFunction } from 'express'
+import { URL } from 'node:url'
 
 import * as security from '../lib/insecurity'
 import { UserModel } from '../models/user'
 import * as utils from '../lib/utils'
 import logger from '../lib/logger'
 
+const ALLOWED_PROTOCOLS = new Set(['https:'])
+const BLOCKED_HOSTS = new Set([
+  'localhost',
+  '127.0.0.1',
+  '::1'
+])
+
 export function profileImageUrlUpload () {
   return async (req: Request, res: Response, next: NextFunction) => {
     if (req.body.imageUrl !== undefined) {
-      const url = req.body.imageUrl
-      if (url.match(/(.)*solve\/challenges\/server-side(.)*/) !== null) req.app.locals.abused_ssrf_bug = true
+      let parsedUrl: URL
+
+      try {
+        parsedUrl = new URL(req.body.imageUrl)
+      } catch {
+        return res.status(400).json({ error: 'Invalid image URL' })
+      }
+
+      // SSRF protection
+      if (
+        !ALLOWED_PROTOCOLS.has(parsedUrl.protocol) ||
+        BLOCKED_HOSTS.has(parsedUrl.hostname)
+      ) {
+        return res.status(400).json({ error: 'Image URL not allowed' })
+      }
+
+      // Juice Shop challenge detection preserved
+      if (parsedUrl.pathname.includes('/solve/challenges/server-side')) {
+        req.app.locals.abused_ssrf_bug = true
+      }
+
       const loggedInUser = security.authenticatedUsers.get(req.cookies.token)
-      if (loggedInUser) {
-        try {
-          const response = await fetch(url)
-          if (!response.ok || !response.body) {
-            throw new Error('url returned a non-OK status code or an empty body')
-          }
-          const ext = ['jpg', 'jpeg', 'png', 'svg', 'gif'].includes(url.split('.').slice(-1)[0].toLowerCase()) ? url.split('.').slice(-1)[0].toLowerCase() : 'jpg'
-          const fileStream = fs.createWriteStream(`frontend/dist/frontend/assets/public/images/uploads/${loggedInUser.data.id}.${ext}`, { flags: 'w' })
-          await finished(Readable.fromWeb(response.body as any).pipe(fileStream))
-          await UserModel.findByPk(loggedInUser.data.id).then(async (user: UserModel | null) => { return await user?.update({ profileImage: `/assets/public/images/uploads/${loggedInUser.data.id}.${ext}` }) }).catch((error: Error) => { next(error) })
-        } catch (error) {
-          try {
-            const user = await UserModel.findByPk(loggedInUser.data.id)
-            await user?.update({ profileImage: url })
-            logger.warn(`Error retrieving user profile image: ${utils.getErrorMessage(error)}; using image link directly`)
-          } catch (error) {
-            next(error)
-            return
-          }
-        }
-      } else {
+      if (!loggedInUser) {
         next(new Error('Blocked illegal activity by ' + req.socket.remoteAddress))
         return
       }
+
+      try {
+        const response = await fetch(parsedUrl.toString())
+        if (!response.ok || !response.body) {
+          throw new Error('Image URL returned invalid response')
+        }
+
+        const ext = ['jpg', 'jpeg', 'png', 'svg', 'gif'].includes(
+          parsedUrl.pathname.split('.').slice(-1)[0].toLowerCase()
+        )
+          ? parsedUrl.pathname.split('.').slice(-1)[0].toLowerCase()
+          : 'jpg'
+
+        const filePath = `frontend/dist/frontend/assets/public/images/uploads/${loggedInUser.data.id}.${ext}`
+        const fileStream = fs.createWriteStream(filePath, { flags: 'w' })
+
+        await finished(Readable.fromWeb(response.body as any).pipe(fileStream))
+
+        await UserModel.findByPk(loggedInUser.data.id)
+          .then(async (user) => await user?.update({
+            profileImage: `/assets/public/images/uploads/${loggedInUser.data.id}.${ext}`
+          }))
+      } catch (error) {
+        try {
+          const user = await UserModel.findByPk(loggedInUser.data.id)
+          await user?.update({ profileImage: parsedUrl.toString() })
+          logger.warn(
+            `Error retrieving user profile image: ${utils.getErrorMessage(error)}; using image link directly`
+          )
+        } catch (error) {
+          next(error)
+          return
+        }
+      }
     }
-    res.location(process.env.BASE_PATH + '/profile')
+
     res.redirect(process.env.BASE_PATH + '/profile')
   }
 }
