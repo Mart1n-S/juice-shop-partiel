@@ -4,9 +4,9 @@
  */
 
 import { type Request, type Response, type NextFunction } from 'express'
-import fs from 'node:fs/promises'
 import config from 'config'
 import pug from 'pug'
+import path from 'node:path'
 
 import * as utils from '../lib/utils'
 
@@ -22,9 +22,16 @@ export function errorHandler () {
       return
     }
 
-    const template = await fs.readFile('views/errorPage.pug', { encoding: 'utf-8' })
     const title = `${config.get<string>('application.name')} (Express ${utils.version('express')})`
-    const fn = pug.compile(template)
-    res.status(500).send(fn({ title, error }))
+
+    const errorPagePath = path.resolve('views/errorPage.pug')
+
+    // Secure-by-design: render from file instead of compiling dynamic template
+    const html = pug.renderFile(errorPagePath, {
+      title,
+      error
+    })
+
+    res.status(500).send(html)
   }
 }
