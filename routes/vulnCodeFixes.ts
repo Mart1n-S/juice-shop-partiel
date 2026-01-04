@@ -43,7 +43,7 @@ export const readFixes = (key: string) => {
       fixes.push(fix)
 
       if (metadata.length === 3) {
-        correct = parseInt(number, 10) - 1
+        correct = Number.parseInt(number, 10) - 1
       }
     }
   }

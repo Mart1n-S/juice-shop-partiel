@@ -9,12 +9,12 @@ import { type Request, type Response, type NextFunction } from 'express'
  * Strict allowlist of internal redirection targets.
  * Only relative paths are allowed to prevent open redirect attacks.
  */
-const ALLOWED_REDIRECT_PATHS: string[] = [
+const ALLOWED_REDIRECT_PATHS = new Set<string>([
   '/profile',
   '/dashboard',
   '/orders'
   // D'autres chemins autorisés peuvent être ajoutés ici
-]
+])
 
 export function performRedirect () {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -26,7 +26,7 @@ export function performRedirect () {
       })
     }
 
-    if (!ALLOWED_REDIRECT_PATHS.includes(toPath)) {
+    if (!ALLOWED_REDIRECT_PATHS.has(toPath)) {
       return res.status(400).json({
         error: 'Invalid redirection target'
       })

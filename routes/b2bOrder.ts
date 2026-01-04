@@ -31,11 +31,15 @@ export function b2bOrder () {
           paymentDue: dateTwoWeeksFromNow()
         })
       } catch (err) {
+        // Explicitly handle the parsing error
         challengeUtils.solveIf(
           challenges.rceChallenge,
           () => true
         )
-        return res.status(400).json({ error: 'Invalid orderLinesData content' })
+
+        return res.status(400).json({
+          error: 'Invalid orderLinesData content'
+        })
       }
     } else {
       res.json({
@@ -52,7 +56,7 @@ export function b2bOrder () {
 
   function dateTwoWeeksFromNow () {
     return new Date(
-      new Date().getTime() + (14 * 24 * 60 * 60 * 1000)
+      Date.now() + (14 * 24 * 60 * 60 * 1000)
     ).toISOString()
   }
 }
